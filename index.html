@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#0f1417">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>眼读</title>
+</head>
+<body>
+  <div id="app">
+    <header id="top">
+      <div id="sentenceRow">
+        <div id="sentence" class="empty"></div>
+        <div id="tools">
+          <button id="askBtn" type="button">问一个问题</button>
+          <button id="gearBtn" type="button" aria-label="设置">设置</button>
+        </div>
+      </div>
+      <div id="prompt" aria-live="polite"></div>
+    </header>
+
+    <main id="stage">
+      <section class="region" data-dir="U" hidden><div class="fill"></div><div class="content"></div></section>
+      <section class="region" data-dir="L"><div class="fill"></div><div class="content"></div></section>
+      <section class="region" data-dir="R"><div class="fill"></div><div class="content"></div></section>
+      <div id="bigmsg" hidden></div>
+      <div id="noface">看不到你的脸<small>请照护者调整手机位置</small></div>
+    </main>
+
+    <footer id="bottom">
+      <div id="legend"><span class="g">😌 闭眼 2 秒 = 返回一步</span><span class="g" id="legendCall">😉 眨眼 3 下 = 叫人</span><button id="backBtn" type="button">返回一步</button></div>
+      <div id="status">
+        <video id="cam" playsinline muted></video>
+        <span id="faceState">未开始</span>
+        <span id="backMeter" aria-hidden="true"></span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast" role="status"></div>
+  <button id="skipBtn" type="button" hidden>跳过教学</button>
+  <div id="callOverlay" hidden><div>🔔</div><b>正在叫人</b><small>照护者点一下屏幕关闭</small></div>
+  <div id="calib" hidden><div id="cdot"></div><div id="ctext"></div></div>
+  <div id="modal" class="overlay" hidden></div>
+  <div id="start" class="overlay"></div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

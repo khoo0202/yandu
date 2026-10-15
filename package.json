@@ -1,0 +1,22 @@
+{
+  "name": "yandu",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-wasm.mjs",
+    "dev": "vite --host",
+    "prebuild": "node scripts/copy-wasm.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "sim": "node --experimental-strip-types --no-warnings sim/run.ts",
+    "data": "python3 scripts/build_lexicon.py"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.35"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "8.3.0"
+  }
+}
