@@ -27,8 +27,8 @@ export function openSettings(app: App) {
     <label class="row" for="sWays">方向数
       <select id="sWays"><option value="2">二向：左、右</option><option value="3">三向：左、右、上（更快，要能稳定往上看）</option></select></label>
     <label class="row" for="sTrig">触发方式
-      <select id="sTrig"><option value="dwell">看住一会儿（稳）</option><option value="glance">看一眼就算（快，容易误选）</option></select></label>
-    <label class="row" for="sDwell">看住多久算选择：<b id="vDwell"></b>
+      <select id="sTrig"><option value="flick">往外看一下再看回来（最快，用于"往手机外面看"）</option><option value="dwell">看住一会儿（稳）</option><option value="glance">看一眼就算（快，容易误选）</option></select></label>
+    <label class="row" for="sDwell">看住多久算选择（"往外看一下"不用这一项）：<b id="vDwell"></b>
       <input type="range" id="sDwell" min="300" max="2500" step="100"></label>
     <label class="row" for="sConf">要看得多准：<b id="vConf"></b><span>经常误选就调高；看了没反应就调低</span>
       <input type="range" id="sConf" min="50" max="95" step="5"></label>
@@ -93,7 +93,7 @@ export function openSettings(app: App) {
     await runSetup(app, true);
     close(); app.home();
   });
-  on('sTrig', 'change', el => { settings.trigger = el.value === 'glance' ? 'glance' : 'dwell'; });
+  on('sTrig', 'change', el => { settings.trigger = el.value === 'glance' ? 'glance' : el.value === 'flick' ? 'flick' : 'dwell'; });
   on('sDwell', 'input', el => { if (settings.trigger === 'glance') settings.glanceMs = Number(el.value); else settings.dwellMs = Number(el.value); });
   on('sConf', 'input', el => { settings.confidence = Number(el.value) / 100; });
   on('sBack', 'input', el => { settings.backMs = Number(el.value); });

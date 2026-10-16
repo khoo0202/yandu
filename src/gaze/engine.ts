@@ -9,6 +9,9 @@ import { settings, loadJSON, saveJSON } from '../store.ts';
 import type { Dir } from '../engine/tree.ts';
 
 const REMOTE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+/** look-out-and-back: shorter than this is noise, longer means the patient is looking at something else */
+const FLICK_MIN = 120;
+const FLICK_MAX = 1500;
 const REMOTE_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
 
 export interface GazeHandlers {
@@ -51,6 +54,8 @@ export class GazeEngine {
   private lastDrift = 0;
   private lastQuality = 0;
   private sink: number[][] | null = null;
+  /** flick mode: the side the eyes went out to, and when */
+  private out: { dir: Dir; since: number } | null = null;
   private canvas = document.createElement('canvas');
 
   constructor(video: HTMLVideoElement, handlers: GazeHandlers) {
@@ -148,6 +153,7 @@ export class GazeEngine {
     if (!f) {
       if (this.facePresent && now - this.faceSeenAt > 600) {
         this.facePresent = false;
+        this.out = null;
         this.h.face(false);
         this.side = null;
         this.h.progress(null, 0);
@@ -166,6 +172,7 @@ export class GazeEngine {
     if (f.blink > 0.5) {
       if (!this.closedSince) { this.closedSince = now; this.backFired = false; }
       const p = (now - this.closedSince) / settings.backMs;
+      if (now - this.closedSince > 400) this.out = null;
       this.side = null;
       this.h.progress(null, 0);
       if (!this.backFired) {
@@ -218,6 +225,7 @@ export class GazeEngine {
     } else this.centreSince = 0;
 
     const dir = (pred.cls !== 'C' && pred.p >= settings.confidence && this.dirs.includes(pred.cls as Dir)) ? pred.cls as Dir : null;
+    if (settings.trigger === 'flick' && !this.holdOverride) { this.flick(dir, pred.cls === 'C', now); return; }
     if (!this.armed || now < this.coolUntil) {
       this.side = null;
       this.h.progress(null, 0);
@@ -234,6 +242,33 @@ export class GazeEngine {
       this.side = null;
       this.h.progress(null, 0);
       this.h.select(dir);
+    }
+  }
+
+  /**
+   * Flick: the eyes go past the edge and come straight back. The choice is made
+   * on the way back, so a long look away (someone walks in) chooses nothing.
+   */
+  private flick(dir: Dir | null, centre: boolean, now: number) {
+    if (now < this.coolUntil) { this.out = null; this.h.progress(null, 0); return; }
+    if (dir) {
+      if (!this.out || this.out.dir !== dir) this.out = { dir, since: now };
+      const t = now - this.out.since;
+      // full bar = "look back now to choose"; nothing once it has gone on too long
+      this.h.progress(t > FLICK_MAX ? null : dir, t >= FLICK_MIN ? 1 : 0.35);
+      return;
+    }
+    if (!this.out) return;
+    const t = now - this.out.since;
+    if (centre) {
+      const d = this.out.dir;
+      this.out = null;
+      this.h.progress(null, 0);
+      if (t >= FLICK_MIN && t <= FLICK_MAX + 200) this.h.select(d);
+    } else if (t > FLICK_MAX + 600) {
+      // stuck between screen and outside: give up
+      this.out = null;
+      this.h.progress(null, 0);
     }
   }
 

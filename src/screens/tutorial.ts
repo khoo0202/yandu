@@ -24,11 +24,14 @@ class LookLesson implements Screen {
   private instruction() {
     const t = this.target();
     const fruit = t === 'L' ? '苹果' : t === 'R' ? '香蕉' : '葡萄';
-    return settings.selectStyle === 'outside' ? `选${SIDE[t]}的${fruit}：眼睛往${SIDE[t]}看到手机外面` : `请看${SIDE[t]}的${fruit}`;
+    if (settings.selectStyle !== 'outside') return `请看${SIDE[t]}的${fruit}`;
+    return settings.trigger === 'flick'
+      ? `选${SIDE[t]}的${fruit}：眼睛往${SIDE[t]}的手机外面看一下，再看回来`
+      : `选${SIDE[t]}的${fruit}：眼睛往${SIDE[t]}看到手机外面`;
   }
   enter() {
     void say(settings.selectStyle === 'outside'
-      ? `第一课：用眼睛选。屏幕上的东西可以随便看，不会选到。要选哪一边，就往那一边的手机外面看，停一下。${this.instruction()}。`
+      ? `第一课：用眼睛选。屏幕上的东西可以随便看，不会选到。要选哪一边，就往那一边的手机外面看${settings.trigger === 'flick' ? '一下，再看回屏幕' : '，停一下'}。${this.instruction()}。`
       : `第一课：用眼睛选。${this.instruction()}，看住不动，等它填满。`);
   }
   render() {

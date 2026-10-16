@@ -172,7 +172,7 @@ export class App {
     const now = Date.now();
     this.undoTimes = this.undoTimes.filter(t => now - t < 20000);
     this.undoTimes.push(now);
-    if (settings.autoSlow && this.undoTimes.length >= 2 && settings.dwellMs < 2000) {
+    if (settings.autoSlow && settings.trigger !== 'flick' && this.undoTimes.length >= 2 && settings.dwellMs < 2000) {
       settings.dwellMs += 200;
       settings.glanceMs = Math.min(1000, settings.glanceMs + 100);
       saveSettings();

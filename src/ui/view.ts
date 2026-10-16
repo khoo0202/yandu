@@ -18,7 +18,11 @@ const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 
 const ARROW_ON: Record<Dir, string> = { L: '← 看左边', R: '看右边 →', U: '↑ 看上面' };
 const ARROW_OUT: Record<Dir, string> = { L: '← 往外看，选这边', R: '选这边，往外看 →', U: '↑ 往上外看，选这边' };
-export function arrowText(d: Dir): string { return (settings.selectStyle === 'outside' ? ARROW_OUT : ARROW_ON)[d]; }
+const ARROW_FLICK: Record<Dir, string> = { L: '← 往外看一下，选这边', R: '选这边，往外看一下 →', U: '↑ 往上外看一下，选这边' };
+export function arrowText(d: Dir): string {
+  if (settings.selectStyle !== 'outside') return ARROW_ON[d];
+  return (settings.trigger === 'flick' ? ARROW_FLICK : ARROW_OUT)[d];
+}
 
 /** Short spoken/printed summary of a group, e.g. "身体不舒服、护理". */
 export function summarize(nodes: Node[], max = 4): string {
@@ -141,7 +145,12 @@ export function setNoFace(on: boolean) { document.body.classList.toggle('noface'
 export function setLegend(backMs: number, call: 'triple' | 'up' | 'off') {
   const g = document.querySelectorAll<HTMLElement>('#legend .g');
   const how = document.getElementById('legendHow');
-  if (how) how.hidden = settings.selectStyle !== 'outside';
+  if (how) {
+    how.hidden = settings.selectStyle !== 'outside';
+    how.textContent = settings.trigger === 'flick'
+      ? '👀 找的时候随便看；要选哪边，眼睛往那边手机外面看一下，再看回来'
+      : '👀 找的时候随便看；要选哪边，眼睛就往那边的手机外面看';
+  }
   g[0].textContent = `😌 闭眼 ${(backMs / 1000).toFixed(1).replace(/\.0$/, '')} 秒 = 返回一步`;
   g[1].hidden = call === 'off';
   g[1].textContent = call === 'up' ? '⬆️ 往上看 2 秒 = 叫人' : '😉 眨眼 3 下 = 叫人';

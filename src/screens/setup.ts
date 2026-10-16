@@ -69,10 +69,10 @@ async function outsideIntro() {
     <p class="step">校准眼睛</p>
     <h1>怎么用眼睛选</h1>
     <p>找字的时候，眼睛可以在屏幕上随便看，不会选到。</p>
-    <p>要选哪一边，就把眼睛<b>往那一边的手机外面看</b>，停一下就选中了。</p>
+    <p>要选哪一边，就把眼睛<b>往那一边的手机外面看一下，再看回屏幕</b>，就选中了。</p>
     <p class="note">照护者可以把手放在手机左边和右边大约一个手掌远的地方，让病人看着手，更容易做到。</p>
     <button class="btn" id="calGo" type="button">开始校准</button>`);
-  void say('找字的时候，眼睛可以在屏幕上随便看。要选哪一边，就往那一边的手机外面看。');
+  void say('找字的时候，眼睛可以在屏幕上随便看。要选哪一边，就往那一边的手机外面看一下，再看回屏幕。');
   await waitClick('calGo');
 }
 
@@ -194,7 +194,9 @@ async function stepTest(app: App, upOk: boolean): Promise<TestResult> {
   });
   const ARROW: Record<Dir, string> = { L: '⬅️', R: '➡️', U: '⬆️' };
   const NAME: Record<Dir, string> = settings.selectStyle === 'outside'
-    ? { L: '左边的手机外面', R: '右边的手机外面', U: '手机上面的外面' }
+    ? (settings.trigger === 'flick'
+      ? { L: '左边的手机外面，再看回来', R: '右边的手机外面，再看回来', U: '手机上面的外面，再看回来' }
+      : { L: '左边的手机外面', R: '右边的手机外面', U: '手机上面的外面' })
     : { L: '左边', R: '右边', U: '上面' };
   void say('第三步，动作测试。请照着提示做。');
   await sleep(2200);

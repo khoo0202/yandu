@@ -1,14 +1,16 @@
 // Settings and patient profile, kept in this phone's browser storage.
 
-export type Trigger = 'dwell' | 'glance';
+/** dwell: hold the look; glance: a short hold; flick: look out and come straight back (outside mode) */
+export type Trigger = 'dwell' | 'glance' | 'flick';
 export type CallGesture = 'triple' | 'up' | 'off';
 /** outside: read anywhere on screen, choose by looking past the phone's edge. onscreen: look at a side to choose. */
 export type SelectStyle = 'outside' | 'onscreen';
 
 export interface Settings {
+  v: number;                // settings format version, for one-off migrations
   selectStyle: SelectStyle; // how a choice is made (see above)
   ways: 2 | 3;              // number of choice regions (3 adds "look up")
-  trigger: Trigger;         // dwell: hold the look; glance: a short look is enough
+  trigger: Trigger;         // see Trigger
   dwellMs: number;          // hold time in dwell mode
   glanceMs: number;         // hold time in glance mode
   confidence: number;       // 0.5..0.95, how sure the classifier must be
@@ -28,7 +30,7 @@ export interface Profile {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  selectStyle: 'outside', ways: 2, trigger: 'dwell', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
+  v: 2, selectStyle: 'outside', ways: 2, trigger: 'flick', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
   callGesture: 'triple', readOptions: false, autoSlow: true, speakPreviewMs: 1500, rate: 0.9,
 };
 
@@ -45,6 +47,13 @@ function save(key: string, v: unknown) {
 }
 
 export const settings: Settings = load('yandu2.settings', DEFAULT_SETTINGS);
+// v2: "look out and come back" became the default way to choose in outside mode
+const storedV = loadJSON<{ v?: number }>('yandu2.settings')?.v ?? (loadJSON('yandu2.settings') ? 1 : 2);
+if (storedV < 2) {
+  if (settings.selectStyle === 'outside') settings.trigger = 'flick';
+  settings.v = 2;
+  try { localStorage.setItem('yandu2.settings', JSON.stringify(settings)); } catch { /* ignore */ }
+}
 export const profile: Profile = load('yandu2.profile', DEFAULT_PROFILE);
 
 export function saveSettings() { save('yandu2.settings', settings); }
