@@ -30,6 +30,10 @@ export function summarize(nodes: Node[], max = 4): string {
   return names.join('、') + (nodes.length > max ? ` 等 ${nodes.length} 个` : '');
 }
 
+function g0(total: number, shown: number): string {
+  return total > shown ? `<div class="more">还有 ${total - shown} 个</div>` : '';
+}
+
 function folderPreview(n: Node): string {
   return n.children ? summarize(n.children, 4) : '';
 }
@@ -47,14 +51,19 @@ function nodesHTML(nodes: Node[]): string {
   if (style === 'letter') {
     return `<div class="letters n${Math.min(n, 13)}">${nodes.map(x => `<div class="lt"><b>${esc(x.label)}</b><i>${esc(x.hint ?? '')}</i></div>`).join('')}</div>`;
   }
-  if (style === 'glyph') {
-    // single characters first (most likely first), then at most 6 words, so the side is easy to scan
-    const chars = nodes.filter(x => x.label.length === 1);
-    const words = nodes.filter(x => x.label.length > 1);
+  if (style === 'glyph' || nodes.some(x => x.style === 'glyph')) {
+    // commands and folders (说完了, 按声母找, 更多字) as chips; then single characters, then a few words
+    const extra = nodes.filter(x => x.style !== 'glyph');
+    const chips = extra.map(x => `<div class="chip">${x.icon ? `<span>${x.icon}</span>` : ''}${esc(x.label)}${x.children ? `<small>${esc(summarize(x.children, 6))}</small>` : ''}</div>`).join('');
+    const glyphs = nodes.filter(x => x.style === 'glyph');
+    const chars = glyphs.filter(x => x.label.length === 1);
+    const words = glyphs.filter(x => x.label.length > 1);
     const show = [...chars.slice(0, 24), ...words.slice(0, chars.length > 8 ? 3 : 6)];
-    const more = n > show.length ? `<div class="more">还有 ${n - show.length} 个</div>` : '';
-    const size = n <= 4 ? 'g-l' : n <= 12 ? 'g-m' : 'g-s';
-    return `<div class="glyphs ${size}">${show.map(x => `<span class="${x.label.length > 1 ? 'wd' : ''}">${esc(x.label)}</span>`).join('')}</div>${more}`;
+    const more = g0(glyphs.length, show.length);
+    const g = glyphs.length;
+    const size = g <= 4 ? 'g-l' : g <= 12 ? 'g-m' : 'g-s';
+    const body = show.length ? `<div class="glyphs ${size}">${show.map(x => `<span class="${x.label.length > 1 ? 'wd' : ''}">${esc(x.label)}</span>`).join('')}</div>` : '';
+    return `${body}${more}${chips ? `<div class="chips">${chips}</div>` : ''}`;
   }
   if (n <= 4) {
     return `<div class="optrows">${nodes.map(x => `<div class="optrow">${x.icon ? `<span class="ic">${x.icon}</span>` : ''}<span class="lb">${esc(x.label)}</span>${x.children ? `<span class="pv">${esc(folderPreview(x))}</span>` : ''}</div>`).join('')}</div>`;

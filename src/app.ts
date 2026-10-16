@@ -2,6 +2,7 @@
 
 import { Selector, dirsFor, type Dir, type Node } from './engine/tree.ts';
 import { buildBoard, boardSentences, CARE_PHRASES } from './data/board.ts';
+import { BEDSIDE_PHRASES } from './data/phrases.ts';
 import { buildHome } from './data/home.ts';
 import { Speller, spellRoot, applyLeaf, type SpellState, type LexiconData } from './lang/speller.ts';
 import { settings, profile, saveSettings } from './store.ts';
@@ -48,7 +49,7 @@ export class App {
     try {
       const r = await fetch(`${import.meta.env.BASE_URL}data/lexicon.json`);
       const data = await r.json() as LexiconData;
-      this.speller = new Speller(data, [...boardSentences(this.board), ...CARE_PHRASES]);
+      this.speller = new Speller(data, [...boardSentences(this.board), ...CARE_PHRASES, ...BEDSIDE_PHRASES]);
     } catch { this.speller = null; }
   }
 
@@ -298,7 +299,7 @@ export class SpellScreen implements Screen {
     const py = this.st.buf ? this.app.speller!.pinyinOf(this.st.buf[0]) : '';
     setPrompt(this.st.buf
       ? `「${py}」开头的字或词，在哪一边？`
-      : this.st.text ? '下一个字的声母（拼音第一个字母）在哪一边？说完了也在这里' : '第一个字的声母（拼音第一个字母）在哪一边？');
+      : this.st.text ? '下一个字或词在哪一边？没有就选「按声母找」；说完了也在这里' : '第一个字或词在哪一边？没有就选「按声母找」');
   }
   select(dir: Dir) {
     const leaf = this.sel.choose(this.dirs().indexOf(dir));

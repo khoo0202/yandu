@@ -22,12 +22,15 @@ npm run build      # 类型检查 + 打包到 dist/
 npm run sim        # 模拟用户：统计各任务要看几次（npm run sim -- 3 为三向）
 ```
 
-重新生成拼字词库（需要 jieba 的 dict.txt）：
+重新生成拼字词库：
 
 ```bash
 pip install pypinyin
-python3 scripts/build_lexicon.py path/to/jieba/dict.txt public/data/lexicon.json
+# 口语词频表：https://github.com/hermitdave/FrequencyWords 的 content/2018/zh_cn/zh_cn_50k.txt
+python3 scripts/build_lexicon.py path/to/zh_cn_50k.txt public/data/lexicon.json
 ```
+
+拼字会根据 `src/data/phrases.ts` 里的床边常用句猜下一个词和整句；把病人常说的话加进去，猜得会更准。
 
 ## 结构
 
@@ -42,6 +45,11 @@ python3 scripts/build_lexicon.py path/to/jieba/dict.txt public/data/lexicon.json
 | `sim/run.ts` | 模拟评测 |
 
 使用记录只存在手机本地，可在设置里导出 CSV。不保存任何图像。
+
+## 数据来源
+
+- `public/data/lexicon.json` 的词频来自 [FrequencyWords](https://github.com/hermitdave/FrequencyWords)（OpenSubtitles 2018 中文字幕统计，CC BY-SA 4.0），按同一协议提供。
+- 拼音由 [pypinyin](https://github.com/mozillazg/python-pinyin) 生成。
 
 ## 部署到 GitHub Pages
 
