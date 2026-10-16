@@ -27,10 +27,14 @@
       <section class="region" data-dir="L"><div class="fill"></div><div class="content"></div></section>
       <section class="region" data-dir="R"><div class="fill"></div><div class="content"></div></section>
       <div id="bigmsg" hidden></div>
+      <div class="edge" id="edgeL" hidden><span>‹</span></div>
+      <div class="edge" id="edgeR" hidden><span>›</span></div>
+      <div class="edge" id="edgeU" hidden><span>˄</span></div>
       <div id="noface">看不到你的脸<small>请照护者调整手机位置</small></div>
     </main>
 
     <footer id="bottom">
+      <div id="legendHow" hidden>👀 找的时候随便看；要选哪边，眼睛就往那边的手机外面看</div>
       <div id="legend"><span class="g">😌 闭眼 2 秒 = 返回一步</span><span class="g" id="legendCall">😉 眨眼 3 下 = 叫人</span><button id="backBtn" type="button">返回一步</button></div>
       <div id="status">
         <video id="cam" playsinline muted></video>
@@ -43,7 +47,7 @@
   <div id="toast" role="status"></div>
   <button id="skipBtn" type="button" hidden>跳过教学</button>
   <div id="callOverlay" hidden><div>🔔</div><b>正在叫人</b><small>照护者点一下屏幕关闭</small></div>
-  <div id="calib" hidden><div id="cdot"></div><div id="ctext"></div></div>
+  <div id="calib" hidden><div id="cdot"></div><div id="carrow" hidden></div><div id="ctext"></div></div>
   <div id="modal" class="overlay" hidden></div>
   <div id="start" class="overlay"></div>
 

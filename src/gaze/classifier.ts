@@ -9,6 +9,7 @@ export interface ClassifierModel {
   mean: Record<string, number[]>;  // in standardised units
   inv: number[][];                 // inverse pooled covariance
   mu0: number[]; sd0: number[];    // standardisation
+  style?: string;                  // selection style the calibration was made for
 }
 
 export interface Prediction { cls: Cls; p: number; probs: Record<string, number> }

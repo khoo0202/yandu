@@ -57,7 +57,8 @@ export class GazeEngine {
     this.video = video;
     this.h = handlers;
     const saved = loadJSON<ClassifierModel>('yandu2.calib');
-    if (saved) this.clf = new Classifier(saved);
+    // a calibration made for the other selection style would misread the eyes
+    if (saved && (saved.style ?? 'onscreen') === settings.selectStyle) this.clf = new Classifier(saved);
   }
 
   async startCamera() {
@@ -128,6 +129,7 @@ export class GazeEngine {
   }
 
   setClassifier(c: Classifier) {
+    c.m.style = settings.selectStyle;
     this.clf = c;
     saveJSON('yandu2.calib', c.m);
     this.armed = true;

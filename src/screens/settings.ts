@@ -21,6 +21,9 @@ export function openSettings(app: App) {
     <p class="note">今天：选择 ${s.selects} 次，撤回 ${s.undos} 次，说出 ${s.spoken.length} 句。${s.spoken.length ? `最近：${esc(s.spoken.slice(-3).join(' / '))}` : ''}</p>
 
     <h2>选择方式</h2>
+    <label class="row" for="sStyle">怎么用眼睛选
+      <select id="sStyle"><option value="outside">往手机外面看（推荐：找字时随便看，不会误选）</option><option value="onscreen">看屏幕左右两边（旧方式）</option></select>
+      <span>改了以后会马上重新校准</span></label>
     <label class="row" for="sWays">方向数
       <select id="sWays"><option value="2">二向：左、右</option><option value="3">三向：左、右、上（更快，要能稳定往上看）</option></select></label>
     <label class="row" for="sTrig">触发方式
@@ -57,6 +60,7 @@ export function openSettings(app: App) {
   </div>`;
 
   const sync = () => {
+    $<HTMLSelectElement>('sStyle').value = settings.selectStyle;
     $<HTMLSelectElement>('sWays').value = String(settings.ways);
     $<HTMLSelectElement>('sTrig').value = settings.trigger;
     $<HTMLInputElement>('sDwell').value = String(settings.trigger === 'glance' ? settings.glanceMs : settings.dwellMs);
@@ -80,6 +84,15 @@ export function openSettings(app: App) {
   const on = (id: string, ev: string, fn: (el: HTMLInputElement) => void) =>
     $<HTMLInputElement>(id).addEventListener(ev, e => { fn(e.target as HTMLInputElement); saveSettings(); saveProfile(); sync(); });
   on('sWays', 'change', el => { settings.ways = Number(el.value) === 3 ? 3 : 2; });
+  $<HTMLSelectElement>('sStyle').addEventListener('change', async e => {
+    settings.selectStyle = (e.target as HTMLSelectElement).value === 'onscreen' ? 'onscreen' : 'outside';
+    saveSettings();
+    if (!app.gaze) { sync(); return; }
+    app.gaze.clf = null; // the old calibration was made for the other style
+    m.innerHTML = '';
+    await runSetup(app, true);
+    close(); app.home();
+  });
   on('sTrig', 'change', el => { settings.trigger = el.value === 'glance' ? 'glance' : 'dwell'; });
   on('sDwell', 'input', el => { if (settings.trigger === 'glance') settings.glanceMs = Number(el.value); else settings.dwellMs = Number(el.value); });
   on('sConf', 'input', el => { settings.confidence = Number(el.value) / 100; });

@@ -2,8 +2,11 @@
 
 export type Trigger = 'dwell' | 'glance';
 export type CallGesture = 'triple' | 'up' | 'off';
+/** outside: read anywhere on screen, choose by looking past the phone's edge. onscreen: look at a side to choose. */
+export type SelectStyle = 'outside' | 'onscreen';
 
 export interface Settings {
+  selectStyle: SelectStyle; // how a choice is made (see above)
   ways: 2 | 3;              // number of choice regions (3 adds "look up")
   trigger: Trigger;         // dwell: hold the look; glance: a short look is enough
   dwellMs: number;          // hold time in dwell mode
@@ -25,7 +28,7 @@ export interface Profile {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  ways: 2, trigger: 'dwell', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
+  selectStyle: 'outside', ways: 2, trigger: 'dwell', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
   callGesture: 'triple', readOptions: false, autoSlow: true, speakPreviewMs: 1500, rate: 0.9,
 };
 

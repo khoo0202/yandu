@@ -61,38 +61,87 @@ async function stepPlace(app: App) {
 }
 
 // ---------- step 2: calibration ----------
+interface CalPoint { cls: Cls; at: 'dot' | 'L' | 'R' | 'U'; x?: number; y?: number; say?: string; text: string; settle: number; ms: number }
+
+/** "outside" mode: explain once, before the first calibration. */
+async function outsideIntro() {
+  card(`
+    <p class="step">校准眼睛</p>
+    <h1>怎么用眼睛选</h1>
+    <p>找字的时候，眼睛可以在屏幕上随便看，不会选到。</p>
+    <p>要选哪一边，就把眼睛<b>往那一边的手机外面看</b>，停一下就选中了。</p>
+    <p class="note">照护者可以把手放在手机左边和右边大约一个手掌远的地方，让病人看着手，更容易做到。</p>
+    <button class="btn" id="calGo" type="button">开始校准</button>`);
+  void say('找字的时候，眼睛可以在屏幕上随便看。要选哪一边，就往那一边的手机外面看。');
+  await waitClick('calGo');
+}
+
 export async function calibrate(app: App, withUp: boolean): Promise<{ ok: boolean; upOk: boolean; msg?: string }> {
   const g = app.gaze!;
+  const outside = settings.selectStyle === 'outside';
+  if (outside) await outsideIntro();
   closeModal();
   const cal = $('calib');
   cal.hidden = false;
-  const dot = $('cdot'), text = $('ctext');
+  const dot = $('cdot'), arrow = $('carrow'), text = $('ctext');
   const W = window.innerWidth, H = window.innerHeight;
   const midY = H * 0.55;
-  const pts: [Cls, number, number, string][] = [
-    ['C', W / 2, midY, '请看中间的圆点'],
-    ['L', W * 0.25, midY, '请看左边的圆点'],
-    ['C', W / 2, midY, '请看回中间'],
-    ['R', W * 0.75, midY, '请看右边的圆点'],
-  ];
-  if (withUp) pts.push(['C', W / 2, midY, '请看回中间'], ['U', W / 2, H * 0.2, '请往上看这个圆点']);
+  const pts: CalPoint[] = outside
+    ? [
+      // reading: anywhere on the screen counts as "not choosing"
+      { cls: 'C', at: 'dot', x: W * 0.25, y: H * 0.45, say: '先跟着圆点，看屏幕上的不同地方', text: '请看圆点', settle: 1600, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.75, y: H * 0.45, text: '请看圆点', settle: 900, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.5, y: H * 0.25, text: '请看圆点', settle: 900, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.25, y: H * 0.75, text: '请看圆点', settle: 900, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.75, y: H * 0.75, text: '请看圆点', settle: 900, ms: 900 },
+      // choosing: past the phone's edge
+      { cls: 'L', at: 'L', say: '现在眼睛往左边看，看到手机外面去', text: '眼睛往左边看，看到手机外面去', settle: 1800, ms: 1800 },
+      { cls: 'C', at: 'dot', x: W * 0.5, y: midY, say: '看回屏幕中间', text: '看回屏幕中间', settle: 1100, ms: 900 },
+      { cls: 'R', at: 'R', say: '现在眼睛往右边看，看到手机外面去', text: '眼睛往右边看，看到手机外面去', settle: 1800, ms: 1800 },
+      ...(withUp ? [
+        { cls: 'C', at: 'dot', x: W * 0.5, y: midY, say: '看回屏幕中间', text: '看回屏幕中间', settle: 1100, ms: 900 },
+        { cls: 'U', at: 'U', say: '现在眼睛往上看，看到手机上面外面去', text: '眼睛往上看，看到手机上面外面去', settle: 1800, ms: 1800 },
+      ] as CalPoint[] : []),
+    ]
+    : [
+      { cls: 'C', at: 'dot', x: W / 2, y: midY, say: '请看中间的圆点', text: '请看中间的圆点', settle: 1400, ms: 1800 },
+      { cls: 'L', at: 'dot', x: W * 0.25, y: midY, say: '请看左边的圆点', text: '请看左边的圆点', settle: 1400, ms: 1800 },
+      { cls: 'C', at: 'dot', x: W / 2, y: midY, say: '请看回中间', text: '请看回中间', settle: 1400, ms: 1800 },
+      { cls: 'R', at: 'dot', x: W * 0.75, y: midY, say: '请看右边的圆点', text: '请看右边的圆点', settle: 1400, ms: 1800 },
+      ...(withUp ? [
+        { cls: 'C', at: 'dot', x: W / 2, y: midY, say: '请看回中间', text: '请看回中间', settle: 1400, ms: 1800 },
+        { cls: 'U', at: 'dot', x: W / 2, y: H * 0.2, say: '请往上看这个圆点', text: '请往上看这个圆点', settle: 1400, ms: 1800 },
+      ] as CalPoint[] : []),
+    ];
   const samples: Partial<Record<Cls, number[][]>> = {};
-  void say('第二步，校准眼睛。请跟着圆点看，头不要动。');
-  await sleep(2600);
-  for (const [cls, x, y, prompt] of pts) {
+  void say('校准眼睛。头不要动，只动眼睛。');
+  await sleep(2400);
+  for (const p of pts) {
     dot.classList.remove('collect');
-    dot.style.left = `${x}px`; dot.style.top = `${y}px`;
-    text.textContent = prompt;
-    void say(prompt);
-    await sleep(1400);
+    if (p.at === 'dot') {
+      arrow.hidden = true;
+      dot.hidden = false;
+      dot.style.left = `${p.x}px`; dot.style.top = `${p.y}px`;
+    } else {
+      dot.hidden = true;
+      arrow.hidden = false;
+      arrow.className = p.at.toLowerCase();
+      arrow.textContent = p.at === 'L' ? '⟵' : p.at === 'R' ? '⟶' : '⟰';
+    }
+    text.textContent = p.text;
+    if (p.say) void say(p.say);
+    await sleep(p.settle);
     dot.classList.add('collect');
-    const got = await g.collect(1800);
-    (samples[cls] ??= []).push(...got);
+    const got = await g.collect(p.ms);
+    (samples[p.cls] ??= []).push(...got);
     dot.classList.remove('collect');
-    text.textContent = got.length >= 8 ? '✓' : '没看清，继续';
-    earcon(got.length >= 8 ? 'ok' : 'error');
-    await sleep(300);
+    const okHere = got.length >= Math.min(8, p.ms / 120);
+    text.textContent = okHere ? '✓' : '没看清，继续';
+    earcon(okHere ? 'ok' : 'error');
+    await sleep(250);
   }
+  dot.hidden = false;
+  arrow.hidden = true;
   cal.hidden = true;
   const enough = (c: Cls) => (samples[c]?.length ?? 0) >= 12;
   if (!enough('C') || !enough('L') || !enough('R')) {
@@ -102,9 +151,13 @@ export async function calibrate(app: App, withUp: boolean): Promise<{ ok: boolea
   const clf = Classifier.train(samples);
   const lr = clf.separation('L', 'R'), cl = Math.min(clf.separation('C', 'L'), clf.separation('C', 'R'));
   const up = withUp && enough('U') ? clf.separation('C', 'U') : 0;
-  log('calib', { detail: `LR=${lr.toFixed(1)} CL=${cl.toFixed(1)} CU=${up.toFixed(1)}` });
+  log('calib', { detail: `${settings.selectStyle} LR=${lr.toFixed(1)} CL=${cl.toFixed(1)} CU=${up.toFixed(1)}` });
   if (lr < 2.5 || cl < 1.5) {
-    return { ok: false, upOk: false, msg: '左右分不太开。请让病人眼睛往两边看得更多一些，或者把手机移近一点，再试一次。' };
+    return {
+      ok: false, upOk: false, msg: outside
+        ? '"看屏幕"和"看手机外面"分不太开。请让病人眼睛往手机外面看得更远一些（可以看照护者的手），再试一次。'
+        : '左右分不太开。请让病人眼睛往两边看得更多一些，或者把手机移近一点，再试一次。',
+    };
   }
   g.setClassifier(clf);
   return { ok: true, upOk: up >= 2 };
@@ -140,7 +193,9 @@ async function stepTest(app: App, upOk: boolean): Promise<TestResult> {
     if (sk) sk.onclick = () => fin(null);
   });
   const ARROW: Record<Dir, string> = { L: '⬅️', R: '➡️', U: '⬆️' };
-  const NAME: Record<Dir, string> = { L: '左边', R: '右边', U: '上面' };
+  const NAME: Record<Dir, string> = settings.selectStyle === 'outside'
+    ? { L: '左边的手机外面', R: '右边的手机外面', U: '手机上面的外面' }
+    : { L: '左边', R: '右边', U: '上面' };
   void say('第三步，动作测试。请照着提示做。');
   await sleep(2200);
   for (const d of seq) {
@@ -151,7 +206,7 @@ async function stepTest(app: App, upOk: boolean): Promise<TestResult> {
     if (r && r.dir === d) { res.times.push(r.t); if (d === 'U') res.up++; else res.lr++; earcon('ok'); }
     else if (r) { res.lrWrong++; earcon('error'); }
     await sleep(500);
-    show('请看回中间', '⏺');
+    show(settings.selectStyle === 'outside' ? '请看回屏幕' : '请看回中间', '⏺');
     await sleep(1200);
   }
   show(`闭上眼睛 ${Math.round(settings.backMs / 1000)} 秒`, '😌');

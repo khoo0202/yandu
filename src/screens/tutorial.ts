@@ -23,9 +23,14 @@ class LookLesson implements Screen {
   private target() { return this.seq[this.i]; }
   private instruction() {
     const t = this.target();
-    return `请看${SIDE[t]}的${t === 'L' ? '苹果' : t === 'R' ? '香蕉' : '葡萄'}`;
+    const fruit = t === 'L' ? '苹果' : t === 'R' ? '香蕉' : '葡萄';
+    return settings.selectStyle === 'outside' ? `选${SIDE[t]}的${fruit}：眼睛往${SIDE[t]}看到手机外面` : `请看${SIDE[t]}的${fruit}`;
   }
-  enter() { void say(`第一课：用眼睛选。${this.instruction()}，看住不动，等它填满。`); }
+  enter() {
+    void say(settings.selectStyle === 'outside'
+      ? `第一课：用眼睛选。屏幕上的东西可以随便看，不会选到。要选哪一边，就往那一边的手机外面看，停一下。${this.instruction()}。`
+      : `第一课：用眼睛选。${this.instruction()}，看住不动，等它填满。`);
+  }
   render() {
     if (this.i >= this.seq.length) return;
     const t = this.target();
@@ -77,11 +82,11 @@ class UndoLesson implements Screen {
   private phase: 'pick' | 'close' = 'pick';
   constructor(private app: App, private next: () => void) {}
   dirs(): Dir[] { return ['L', 'R']; }
-  enter() { void say('第三课：撤回。先看右边的星星。'); }
+  enter() { void say(settings.selectStyle === 'outside' ? '第三课：撤回。先选右边的星星：往右边的手机外面看。' : '第三课：撤回。先看右边的星星。'); }
   render() {
     if (this.phase === 'pick') {
       renderRegions({ L: { big: { icon: '🌙', label: '月亮' }, dim: true }, R: { big: { icon: '⭐', label: '星星' }, glow: true } }, this.dirs());
-      setPrompt('第三课 · 请看右边的星星');
+      setPrompt(settings.selectStyle === 'outside' ? '第三课 · 选右边的星星：往右边手机外面看' : '第三课 · 请看右边的星星');
     } else {
       renderRegions({ L: { big: { icon: '😌', label: '闭上眼睛', sub: `数到 ${Math.round(settings.backMs / 1000)}` }, glow: true }, R: { big: { icon: '⭐', label: '刚才选了星星' }, dim: true } }, this.dirs());
       setPrompt(`第三课 · 选错了也没关系：闭上眼睛 ${Math.round(settings.backMs / 1000)} 秒，就能撤回`);
@@ -107,7 +112,7 @@ function guidedLesson(app: App, finish: () => void): Screen {
     if (leaf.say) app.push(new PreviewScreen(app, leaf.say, finish));
   }, {
     guide: 'water',
-    onWrong: () => { earcon('error'); void say('不是这边。请看发亮的那一边'); },
+    onWrong: () => { earcon('error'); void say('不是这边。请选发亮的那一边'); },
   });
   const enter = () => void say('第四课：说一句话。我们一起说"我想喝水"。每一步都看发亮的那一边。');
   s.enter = enter;

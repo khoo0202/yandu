@@ -1,6 +1,7 @@
 // Drawing the main screen: sentence, prompt, the choice regions, toasts.
 
 import type { Dir, Node } from '../engine/tree.ts';
+import { settings } from '../store.ts';
 
 export interface RegionSpec {
   nodes?: Node[];
@@ -15,7 +16,9 @@ export type Regions = Partial<Record<Dir, RegionSpec>>;
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
-export const ARROW: Record<Dir, string> = { L: '← 看左边', R: '看右边 →', U: '↑ 看上面' };
+const ARROW_ON: Record<Dir, string> = { L: '← 看左边', R: '看右边 →', U: '↑ 看上面' };
+const ARROW_OUT: Record<Dir, string> = { L: '← 往外看，选这边', R: '选这边，往外看 →', U: '↑ 往上外看，选这边' };
+export function arrowText(d: Dir): string { return (settings.selectStyle === 'outside' ? ARROW_OUT : ARROW_ON)[d]; }
 
 /** Short spoken/printed summary of a group, e.g. "身体不舒服、护理". */
 export function summarize(nodes: Node[], max = 4): string {
@@ -73,7 +76,7 @@ export function renderRegions(regions: Regions, active: Dir[]) {
     const body = spec!.big
       ? `<div class="one">${spec!.big.icon ? `<div class="ic">${spec!.big.icon}</div>` : ''}<div class="lb">${esc(spec!.big.label)}</div>${spec!.big.sub ? `<div class="sub">${esc(spec!.big.sub)}</div>` : ''}</div>`
       : nodesHTML(spec!.nodes!);
-    content.innerHTML = `<div class="arrow">${ARROW[d]}</div>${body}`;
+    content.innerHTML = `<div class="arrow">${arrowText(d)}</div>${body}`;
   }
 }
 
@@ -81,6 +84,18 @@ export function setProgress(dir: Dir | null, p: number) {
   for (const d of ['L', 'R', 'U'] as Dir[]) {
     const f = document.querySelector<HTMLElement>(`.region[data-dir="${d}"] .fill`);
     if (f) f.style.transform = `scaleY(${d === dir ? Math.min(1, p) : 0})`;
+    const e = document.getElementById(`edge${d}`);
+    if (e) { e.classList.toggle('on', d === dir && p > 0); e.style.setProperty('--p', String(d === dir ? Math.min(1, p) : 0)); }
+  }
+}
+
+/** Edge markers that show where to look (past the phone's edge) in "outside" mode. */
+export function setEdges(active: Dir[]) {
+  const out = settings.selectStyle === 'outside';
+  document.body.classList.toggle('outside', out);
+  for (const d of ['L', 'R', 'U'] as Dir[]) {
+    const e = document.getElementById(`edge${d}`);
+    if (e) e.hidden = !out || !active.includes(d);
   }
 }
 
@@ -125,6 +140,8 @@ export function setNoFace(on: boolean) { document.body.classList.toggle('noface'
 
 export function setLegend(backMs: number, call: 'triple' | 'up' | 'off') {
   const g = document.querySelectorAll<HTMLElement>('#legend .g');
+  const how = document.getElementById('legendHow');
+  if (how) how.hidden = settings.selectStyle !== 'outside';
   g[0].textContent = `😌 闭眼 ${(backMs / 1000).toFixed(1).replace(/\.0$/, '')} 秒 = 返回一步`;
   g[1].hidden = call === 'off';
   g[1].textContent = call === 'up' ? '⬆️ 往上看 2 秒 = 叫人' : '😉 眨眼 3 下 = 叫人';

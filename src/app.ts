@@ -9,7 +9,7 @@ import { say, earcon, startAlarm, stopAlarm, stopSpeaking } from './speech.ts';
 import { log } from './metrics.ts';
 import type { GazeEngine } from './gaze/engine.ts';
 import {
-  renderRegions, setPrompt, setSentence, toast, flash, setProgress, summarize, setLegend, type Regions,
+  renderRegions, setPrompt, setSentence, toast, flash, setProgress, summarize, setLegend, setEdges, type Regions,
 } from './ui/view.ts';
 
 export interface Screen {
@@ -40,6 +40,9 @@ export class App {
   tap: { select?: (d: Dir) => void; back?: () => void; call?: () => void } | null = null;
   private undoTimes: number[] = [];
   private callOn = false;
+  /** start of the current stretch of use, for the eye-rest reminder */
+  private useSince = 0;
+  private lastSelectAt = 0;
 
   async loadLexicon() {
     try {
@@ -92,6 +95,7 @@ export class App {
     if (this.gaze) { this.gaze.dirs = s.dirs(); this.gaze.cooldown(350); }
     setProgress(null, 0);
     setLegend(settings.backMs, settings.callGesture);
+    setEdges(s.dirs());
     s.render();
     if (settings.readOptions && !this.modal && s.spoken) void say(s.spoken());
   }
@@ -104,6 +108,7 @@ export class App {
     const s = this.top();
     if (!s || !s.dirs().includes(dir)) return;
     log('select', { screen: s.id, dir });
+    this.restReminder();
     earcon(dir);
     flash(dir);
     s.select(dir);
@@ -146,6 +151,20 @@ export class App {
     stopAlarm();
     stopSpeaking();
     this.gaze?.cooldown(800);
+  }
+
+  /** After 20 minutes of steady use, suggest resting the eyes (a 5-minute gap resets the clock). */
+  private restReminder() {
+    const now = Date.now();
+    if (!this.useSince || now - this.lastSelectAt > 5 * 60_000) this.useSince = now;
+    this.lastSelectAt = now;
+    if (now - this.useSince > 20 * 60_000) {
+      this.useSince = now;
+      setTimeout(() => {
+        toast('用了 20 分钟了，让眼睛休息一下吧：可以闭眼或看远处', 5000);
+        void say('用了二十分钟了，眼睛休息一下吧', false);
+      }, 1200);
+    }
   }
 
   /** Two undos within 20 s: the patient is probably being rushed. Hold a bit longer. */
@@ -202,7 +221,7 @@ export class ChoiceScreen implements Screen {
     const g = this.sel.groups();
     const glow = this.opts.guide ? this.sel.groupWith(this.opts.guide) : -1;
     renderRegions(regionsFromGroups(g, this.dirs(), glow), this.dirs());
-    setPrompt(this.opts.guide ? '请看发亮的那一边' : this.opts.prompt?.(this.sel.depth()) ?? '你想说的在哪一边？');
+    setPrompt(this.opts.guide ? '请选发亮的那一边' : this.opts.prompt?.(this.sel.depth()) ?? '你想说的在哪一边？');
   }
   select(dir: Dir) {
     const gi = this.dirs().indexOf(dir);

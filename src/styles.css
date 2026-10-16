@@ -119,6 +119,22 @@ body.noface #noface { display: flex; }
 body.touch-only #noface { display: none; }
 body.resting #app { filter: brightness(.55); }
 
+/* edge markers: in "outside" mode the patient looks past these to choose */
+.edge {
+  position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--ink); font-size: 26px; font-weight: 800; pointer-events: none; opacity: .55;
+  background: linear-gradient(var(--c), var(--c)) no-repeat; background-size: 100% calc(var(--p, 0) * 100%); background-position: bottom;
+}
+.edge[hidden] { display: none; }
+.edge.on { opacity: 1; }
+#edgeL { --c: var(--left); left: -12px; top: 20%; bottom: 20%; width: 14px; border-radius: 0 8px 8px 0; border: 2px solid var(--left); }
+#edgeR { --c: var(--right); right: -12px; top: 20%; bottom: 20%; width: 14px; border-radius: 8px 0 0 8px; border: 2px solid var(--right); }
+#edgeU { --c: var(--up); top: -10px; left: 25%; right: 25%; height: 12px; border-radius: 0 0 8px 8px; border: 2px solid var(--up); }
+.edge span { display: none; }
+body.outside .region .arrow { color: var(--ink); font-weight: 600; letter-spacing: 0; }
+#legendHow { font-size: clamp(13px, 3.6vw, 17px); color: var(--ink); line-height: 1.35; }
+#legendHow[hidden] { display: none; }
+
 /* ---- bottom ---- */
 #bottom { display: flex; flex-direction: column; gap: 6px; }
 #legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: clamp(13px, 3.6vw, 17px); color: var(--dim); }
@@ -162,6 +178,11 @@ body.touch-only #cam { display: none; }
 }
 #cdot.collect { animation: dot .6s ease-in-out infinite alternate; }
 @keyframes dot { to { box-shadow: 0 0 0 22px rgba(243, 241, 234, .05); } }
+#carrow { position: absolute; top: 50%; transform: translateY(-50%); font-size: 120px; line-height: 1; color: var(--ink); animation: nudge .8s ease-in-out infinite alternate; }
+#carrow[hidden] { display: none; }
+#carrow.l { left: 6px; } #carrow.r { right: 6px; }
+#carrow.u { top: 8px; left: 50%; transform: translateX(-50%); }
+@keyframes nudge { to { opacity: .45; } }
 #ctext { position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); text-align: center; font-size: 22px; color: var(--dim); }
 
 .overlay {
