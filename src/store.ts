@@ -30,7 +30,7 @@ export interface Profile {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  v: 2, selectStyle: 'outside', ways: 2, trigger: 'flick', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
+  v: 3, selectStyle: 'outside', ways: 3, trigger: 'flick', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
   callGesture: 'triple', readOptions: false, autoSlow: true, speakPreviewMs: 1500, rate: 0.9,
 };
 
@@ -47,11 +47,17 @@ function save(key: string, v: unknown) {
 }
 
 export const settings: Settings = load('yandu2.settings', DEFAULT_SETTINGS);
-// v2: "look out and come back" became the default way to choose in outside mode
-const storedV = loadJSON<{ v?: number }>('yandu2.settings')?.v ?? (loadJSON('yandu2.settings') ? 1 : 2);
-if (storedV < 2) {
-  if (settings.selectStyle === 'outside') settings.trigger = 'flick';
-  settings.v = 2;
+// one-off upgrades of settings saved by older versions
+const storedV = loadJSON<{ v?: number }>('yandu2.settings')?.v ?? (loadJSON('yandu2.settings') ? 1 : DEFAULT_SETTINGS.v);
+if (storedV < DEFAULT_SETTINGS.v) {
+  // v2: "look out and come back" became the way to choose in outside mode
+  if (storedV < 2 && settings.selectStyle === 'outside') settings.trigger = 'flick';
+  // v3: three directions (left, right, up). Recalibrate so "up" is measured and checked.
+  if (storedV < 3) {
+    settings.ways = 3;
+    try { localStorage.removeItem('yandu2.calib'); } catch { /* ignore */ }
+  }
+  settings.v = DEFAULT_SETTINGS.v;
   try { localStorage.setItem('yandu2.settings', JSON.stringify(settings)); } catch { /* ignore */ }
 }
 export const profile: Profile = load('yandu2.profile', DEFAULT_PROFILE);

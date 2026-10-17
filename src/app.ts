@@ -193,6 +193,11 @@ export class App {
 // ---------------- screens ----------------
 
 const ways = (): Dir[] => dirsFor(settings.ways);
+/** Directions that actually hold something (a screen with two options shows two sides, not an empty third). */
+const liveDirs = (sel: Selector): Dir[] => {
+  const g = sel.groups();
+  return ways().filter((_, i) => (g[i]?.length ?? 0) > 0);
+};
 
 function regionsFromGroups(groups: Node[][], dirs: Dir[], glow = -1): Regions {
   const r: Regions = {};
@@ -217,7 +222,7 @@ export class ChoiceScreen implements Screen {
   ) {
     this.sel = new Selector(nodes, settings.ways);
   }
-  dirs() { return ways(); }
+  dirs() { return liveDirs(this.sel); }
   render() {
     const g = this.sel.groups();
     const glow = this.opts.guide ? this.sel.groupWith(this.opts.guide) : -1;
@@ -293,7 +298,7 @@ export class SpellScreen implements Screen {
   }
   private build() { this.sel = new Selector(spellRoot(this.app.speller!, this.st), settings.ways); }
   pendingLabel() { return this.st.buf ? ` ${this.app.speller!.pinyinOf(this.st.buf[0])}…` : ''; }
-  dirs() { return ways(); }
+  dirs() { return liveDirs(this.sel); }
   render() {
     renderRegions(regionsFromGroups(this.sel.groups(), this.dirs()), this.dirs());
     const py = this.st.buf ? this.app.speller!.pinyinOf(this.st.buf[0]) : '';

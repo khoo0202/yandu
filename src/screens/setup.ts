@@ -275,7 +275,14 @@ export async function runSetup(app: App, calibOnly = false) {
   for (;;) {
     const c = await calibrate(app, true);
     if (c.ok) {
-      if (calibOnly) { card(`<h1>校准完成</h1><p>${c.upOk ? '左、右、上都能分清。' : '左右能分清。'}</p><button class="btn" id="ok" type="button">好</button>`); await waitClick('ok'); break; }
+      if (calibOnly) {
+        // three directions only work when "up" can be told apart
+        const fellBack = settings.ways === 3 && !c.upOk;
+        if (fellBack) { settings.ways = 2; saveSettings(); }
+        card(`<h1>校准完成</h1><p>${c.upOk ? '左、右、上都能分清，用三向选择。' : '左右能分清。'}</p>${fellBack ? '<p class="note warn">"往上看"分不太清，先用二向（左、右）。想再试三向：设置 → 重新校准眼睛，往上看时看得更高一些。</p>' : ''}<button class="btn" id="ok" type="button">好</button>`);
+        await waitClick('ok');
+        break;
+      }
       app.modal = false; // let the gaze engine's events reach the test
       g.paused = false;
       const r = await stepTest(app, c.upOk);
