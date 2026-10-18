@@ -91,6 +91,23 @@ export class Classifier {
     return Math.sqrt(this.maha(this.m.mean[a], this.m.mean[b]));
   }
 
+  /**
+   * How far `x` has travelled from the screen ("C") towards class `cls`:
+   * 0 = typical reading position, 1 = where the patient looked during calibration.
+   */
+  reach(x: number[], cls: Cls): number {
+    const c = this.m.mean.C, k = this.m.mean[cls];
+    if (!c || !k) return 0;
+    const zx = this.z(x);
+    const d = zx.map((v, i) => v - c[i]), v = k.map((m, i) => m - c[i]);
+    let num = 0, den = 0;
+    for (let i = 0; i < d.length; i++) for (let j = 0; j < d.length; j++) {
+      num += d[i] * this.m.inv[i][j] * v[j];
+      den += v[i] * this.m.inv[i][j] * v[j];
+    }
+    return den > 0 ? num / den : 0;
+  }
+
   /** Head moved: shift every class by part of the drift seen while the patient looks at the centre. */
   drift(centreFrames: number[][], alpha = 0.1) {
     if (!centreFrames.length || !this.m.mean.C) return;

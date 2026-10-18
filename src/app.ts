@@ -136,6 +136,14 @@ export class App {
     } else toast('已经在最开始了');
   }
 
+  /** Flick mode: the patient kept looking away after a choice, so it was probably not meant. */
+  undoLookAway() {
+    if (this.modal || this.callOn || this.tap) return;
+    log('undo-lookaway');
+    this.onBack();
+    setTimeout(() => toast('往外看太久了，刚才的选择已撤回', 2500), 50);
+  }
+
   onCall() {
     if (this.tap?.call) { this.tap.call(); return; }
     if (this.callOn) return;

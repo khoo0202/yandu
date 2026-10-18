@@ -13,6 +13,7 @@ export interface Settings {
   trigger: Trigger;         // see Trigger
   dwellMs: number;          // hold time in dwell mode
   glanceMs: number;         // hold time in glance mode
+  flickMs: number;          // flick mode: this long past the edge chooses
   confidence: number;       // 0.5..0.95, how sure the classifier must be
   backMs: number;           // eyes closed this long = go back one step
   callGesture: CallGesture; // how the patient calls for help from any screen
@@ -30,7 +31,7 @@ export interface Profile {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  v: 3, selectStyle: 'outside', ways: 3, trigger: 'flick', dwellMs: 700, glanceMs: 300, confidence: 0.8, backMs: 2000,
+  v: 4, selectStyle: 'outside', ways: 3, trigger: 'flick', dwellMs: 700, glanceMs: 300, flickMs: 150, confidence: 0.8, backMs: 2000,
   callGesture: 'triple', readOptions: false, autoSlow: true, speakPreviewMs: 1500, rate: 0.9,
 };
 
@@ -53,8 +54,10 @@ if (storedV < DEFAULT_SETTINGS.v) {
   // v2: "look out and come back" became the way to choose in outside mode
   if (storedV < 2 && settings.selectStyle === 'outside') settings.trigger = 'flick';
   // v3: three directions (left, right, up). Recalibrate so "up" is measured and checked.
-  if (storedV < 3) {
-    settings.ways = 3;
+  if (storedV < 3) settings.ways = 3;
+  // v4: calibration also measures reading at the very top of the screen, so "up" is not
+  // mistaken for reading the sentence. Recalibrate once.
+  if (storedV < 4) {
     try { localStorage.removeItem('yandu2.calib'); } catch { /* ignore */ }
   }
   settings.v = DEFAULT_SETTINGS.v;

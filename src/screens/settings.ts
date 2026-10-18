@@ -28,7 +28,9 @@ export function openSettings(app: App) {
       <select id="sWays"><option value="2">二向：左、右</option><option value="3">三向：左、右、上（更快，要能稳定往上看）</option></select></label>
     <label class="row" for="sTrig">触发方式
       <select id="sTrig"><option value="flick">往外看一下再看回来（最快，用于"往手机外面看"）</option><option value="dwell">看住一会儿（稳）</option><option value="glance">看一眼就算（快，容易误选）</option></select></label>
-    <label class="row" for="sDwell">看住多久算选择（"往外看一下"不用这一项）：<b id="vDwell"></b>
+    <label class="row" for="sFlick">往外看多久就选中（"往外看一下"方式）：<b id="vFlick"></b><span>常常误选就调长；觉得慢就调短</span>
+      <input type="range" id="sFlick" min="100" max="600" step="50"></label>
+    <label class="row" for="sDwell">看住多久算选择（"看住一会儿"方式）：<b id="vDwell"></b>
       <input type="range" id="sDwell" min="300" max="2500" step="100"></label>
     <label class="row" for="sConf">要看得多准：<b id="vConf"></b><span>经常误选就调高；看了没反应就调低</span>
       <input type="range" id="sConf" min="50" max="95" step="5"></label>
@@ -63,6 +65,8 @@ export function openSettings(app: App) {
     $<HTMLSelectElement>('sStyle').value = settings.selectStyle;
     $<HTMLSelectElement>('sWays').value = String(settings.ways);
     $<HTMLSelectElement>('sTrig').value = settings.trigger;
+    $<HTMLInputElement>('sFlick').value = String(settings.flickMs);
+    $('vFlick').textContent = `${(settings.flickMs / 1000).toFixed(2).replace(/0$/, '')} 秒`;
     $<HTMLInputElement>('sDwell').value = String(settings.trigger === 'glance' ? settings.glanceMs : settings.dwellMs);
     $('vDwell').textContent = `${((settings.trigger === 'glance' ? settings.glanceMs : settings.dwellMs) / 1000).toFixed(1)} 秒`;
     $<HTMLInputElement>('sConf').value = String(Math.round(settings.confidence * 100));
@@ -94,6 +98,7 @@ export function openSettings(app: App) {
     close(); app.home();
   });
   on('sTrig', 'change', el => { settings.trigger = el.value === 'glance' ? 'glance' : el.value === 'flick' ? 'flick' : 'dwell'; });
+  on('sFlick', 'input', el => { settings.flickMs = Number(el.value); });
   on('sDwell', 'input', el => { if (settings.trigger === 'glance') settings.glanceMs = Number(el.value); else settings.dwellMs = Number(el.value); });
   on('sConf', 'input', el => { settings.confidence = Number(el.value) / 100; });
   on('sBack', 'input', el => { settings.backMs = Number(el.value); });

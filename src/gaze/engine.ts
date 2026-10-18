@@ -9,14 +9,17 @@ import { settings, loadJSON, saveJSON } from '../store.ts';
 import type { Dir } from '../engine/tree.ts';
 
 const REMOTE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-/** look-out-and-back: shorter than this is noise, longer means the patient is looking at something else */
-const FLICK_MIN = 120;
-const FLICK_MAX = 1500;
+/** flick: still looking away this long after a choice = looking at something else, so the choice is taken back */
+const AUTO_UNDO_MS = 1400;
+/** how far towards the calibrated "outside" position the eyes must go (0 = reading, 1 = calibration) */
+const REACH: Record<string, number> = { L: 0.5, R: 0.5, U: 0.8 };
 const REMOTE_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
 
 export interface GazeHandlers {
   progress(dir: Dir | null, p: number): void;
   select(dir: Dir): void;
+  /** flick mode: the eyes stayed outside long after a choice, take it back */
+  lookedAway(): void;
   backProgress(p: number): void;
   back(): void;
   call(): void;
@@ -55,7 +58,7 @@ export class GazeEngine {
   private lastQuality = 0;
   private sink: number[][] | null = null;
   /** flick mode: the side the eyes went out to, and when */
-  private out: { dir: Dir; since: number } | null = null;
+  private out: { dir: Dir; since: number; fired: boolean; undone: boolean } | null = null;
   private canvas = document.createElement('canvas');
 
   constructor(video: HTMLVideoElement, handlers: GazeHandlers) {
@@ -224,7 +227,10 @@ export class GazeEngine {
       }
     } else this.centreSince = 0;
 
-    const dir = (pred.cls !== 'C' && pred.p >= settings.confidence && this.dirs.includes(pred.cls as Dir)) ? pred.cls as Dir : null;
+    let dir = (pred.cls !== 'C' && pred.p >= settings.confidence && this.dirs.includes(pred.cls as Dir)) ? pred.cls as Dir : null;
+    // up is the hardest to tell from reading the top line: ask for more certainty and a clearer look
+    if (dir === 'U' && pred.p < Math.max(settings.confidence, 0.93)) dir = null;
+    if (dir && this.clf.reach(f.x, dir) < REACH[dir]) dir = null;
     if (settings.trigger === 'flick' && !this.holdOverride) { this.flick(dir, pred.cls === 'C', now); return; }
     if (!this.armed || now < this.coolUntil) {
       this.side = null;
@@ -246,30 +252,34 @@ export class GazeEngine {
   }
 
   /**
-   * Flick: the eyes go past the edge and come straight back. The choice is made
-   * on the way back, so a long look away (someone walks in) chooses nothing.
+   * Flick: a short look past the edge chooses that side straight away. The eyes
+   * must come back to the screen before the next choice. If they stay outside
+   * well after the choice (someone walked in), the choice is taken back.
    */
   private flick(dir: Dir | null, centre: boolean, now: number) {
     if (now < this.coolUntil) { this.out = null; this.h.progress(null, 0); return; }
     if (dir) {
-      if (!this.out || this.out.dir !== dir) this.out = { dir, since: now };
-      const t = now - this.out.since;
-      // full bar = "look back now to choose"; nothing once it has gone on too long
-      this.h.progress(t > FLICK_MAX ? null : dir, t >= FLICK_MIN ? 1 : 0.35);
+      if (!this.out || this.out.dir !== dir) this.out = { dir, since: now, fired: false, undone: false };
+      const o = this.out;
+      const t = now - o.since;
+      if (!o.fired) {
+        if (!this.armed) { this.h.progress(null, 0); return; }
+        const need = dir === 'U' ? Math.max(settings.flickMs, 180) : settings.flickMs;
+        this.h.progress(dir, Math.min(1, t / need));
+        if (t >= need) {
+          o.fired = true;
+          this.armed = false;
+          this.h.progress(null, 0);
+          this.h.select(dir);
+        }
+      } else if (!o.undone && t > AUTO_UNDO_MS) {
+        o.undone = true;
+        this.h.lookedAway();
+      }
       return;
     }
-    if (!this.out) return;
-    const t = now - this.out.since;
-    if (centre) {
-      const d = this.out.dir;
-      this.out = null;
-      this.h.progress(null, 0);
-      if (t >= FLICK_MIN && t <= FLICK_MAX + 200) this.h.select(d);
-    } else if (t > FLICK_MAX + 600) {
-      // stuck between screen and outside: give up
-      this.out = null;
-      this.h.progress(null, 0);
-    }
+    if (centre) this.out = null;
+    this.h.progress(null, 0);
   }
 
   /** Light, distance and angle check. Returns a message to show, or null when fine. */

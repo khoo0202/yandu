@@ -69,10 +69,10 @@ async function outsideIntro() {
     <p class="step">校准眼睛</p>
     <h1>怎么用眼睛选</h1>
     <p>找字的时候，眼睛可以在屏幕上随便看，不会选到。</p>
-    <p>要选哪一边，就把眼睛<b>往那一边的手机外面看一下，再看回屏幕</b>，就选中了。</p>
+    <p>要选哪一边，就把眼睛<b>往那一边的手机外面看一下</b>，马上就选中；然后看回屏幕，准备下一次。</p>
     <p class="note">照护者可以把手放在手机左边和右边大约一个手掌远的地方，让病人看着手，更容易做到。</p>
     <button class="btn" id="calGo" type="button">开始校准</button>`);
-  void say('找字的时候，眼睛可以在屏幕上随便看。要选哪一边，就往那一边的手机外面看一下，再看回屏幕。');
+  void say('找字的时候，眼睛可以在屏幕上随便看。要选哪一边，就往那一边的手机外面看一下，然后看回屏幕。');
   await waitClick('calGo');
 }
 
@@ -90,6 +90,10 @@ export async function calibrate(app: App, withUp: boolean): Promise<{ ok: boolea
     ? [
       // reading: anywhere on the screen counts as "not choosing"
       { cls: 'C', at: 'dot', x: W * 0.25, y: H * 0.45, say: '先跟着圆点，看屏幕上的不同地方', text: '请看圆点', settle: 1600, ms: 900 },
+      // the sentence line at the very top is read often; it must not look like "up"
+      { cls: 'C', at: 'dot', x: W * 0.2, y: H * 0.07, text: '请看最上面的圆点', settle: 900, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.8, y: H * 0.07, text: '请看最上面的圆点', settle: 900, ms: 900 },
+      { cls: 'C', at: 'dot', x: W * 0.5, y: H * 0.16, text: '请看圆点', settle: 900, ms: 900 },
       { cls: 'C', at: 'dot', x: W * 0.75, y: H * 0.45, text: '请看圆点', settle: 900, ms: 900 },
       { cls: 'C', at: 'dot', x: W * 0.5, y: H * 0.25, text: '请看圆点', settle: 900, ms: 900 },
       { cls: 'C', at: 'dot', x: W * 0.25, y: H * 0.75, text: '请看圆点', settle: 900, ms: 900 },
@@ -100,7 +104,7 @@ export async function calibrate(app: App, withUp: boolean): Promise<{ ok: boolea
       { cls: 'R', at: 'R', say: '现在眼睛往右边看，看到手机外面去', text: '眼睛往右边看，看到手机外面去', settle: 1800, ms: 1800 },
       ...(withUp ? [
         { cls: 'C', at: 'dot', x: W * 0.5, y: midY, say: '看回屏幕中间', text: '看回屏幕中间', settle: 1100, ms: 900 },
-        { cls: 'U', at: 'U', say: '现在眼睛往上看，看到手机上面外面去', text: '眼睛往上看，看到手机上面外面去', settle: 1800, ms: 1800 },
+        { cls: 'U', at: 'U', say: '现在眼睛往上看，看到手机上面的外面去，要看高一点', text: '眼睛往上看，看到手机上面的外面去（看高一点）', settle: 1800, ms: 1800 },
       ] as CalPoint[] : []),
     ]
     : [

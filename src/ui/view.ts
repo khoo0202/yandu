@@ -157,7 +157,7 @@ export function setLegend(backMs: number, call: 'triple' | 'up' | 'off') {
   if (how) {
     how.hidden = settings.selectStyle !== 'outside';
     how.textContent = settings.trigger === 'flick'
-      ? '👀 找的时候随便看；要选哪边，眼睛往那边手机外面看一下，再看回来'
+      ? '👀 找的时候随便看；要选哪边，眼睛往那边手机外面看一下就选中，再看回屏幕'
       : '👀 找的时候随便看；要选哪边，眼睛就往那边的手机外面看';
   }
   g[0].textContent = `😌 闭眼 ${(backMs / 1000).toFixed(1).replace(/\.0$/, '')} 秒 = 返回一步`;

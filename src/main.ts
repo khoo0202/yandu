@@ -88,6 +88,7 @@ function startCard() {
       const g = app.gaze ?? new GazeEngine($<HTMLVideoElement>('cam'), {
         progress: (d, p) => setProgress(d, p),
         select: d => app.onSelect(d),
+        lookedAway: () => app.undoLookAway(),
         backProgress: p => setBackMeter(p),
         back: () => app.onBack(),
         call: () => app.onCall(),
