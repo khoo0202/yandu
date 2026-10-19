@@ -38,7 +38,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 /* ---- stage ---- */
 #stage { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; gap: 10px; }
-#stage.three { grid-template-rows: 30% 1fr; grid-template-areas: "U U" "L R"; }
+#stage.three { grid-template-rows: 34% 1fr; grid-template-areas: "U U" "L R"; }
 #stage.three .region[data-dir="U"] { grid-area: U; }
 #stage.three .region[data-dir="L"] { grid-area: L; }
 #stage.three .region[data-dir="R"] { grid-area: R; }
@@ -60,7 +60,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .region[data-dir="U"] .fill { background: var(--up); }
 .region.hit { animation: hit .35s ease-out; }
 @keyframes hit { 0% { filter: brightness(2.2); } 100% { filter: none; } }
-.content { position: relative; width: 100%; max-height: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+.content { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
 .arrow { font-size: clamp(13px, 3.6vw, 18px); color: var(--dim); letter-spacing: .08em; }
 
 /* one option */
@@ -69,6 +69,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .one .lb { font-size: clamp(28px, 8.5vw, 56px); font-weight: 800; line-height: 1.12; word-break: break-all; text-wrap: balance; }
 .one .sub { font-size: clamp(14px, 4vw, 20px); color: var(--dim); line-height: 1.35; }
 .one.glyph .lb, .one.letter .lb { font-size: clamp(64px, 22vw, 140px); }
+/* the top band is short: smaller single items there */
+.region[data-dir="U"] .one .ic { font-size: clamp(36px, 11vw, 72px); }
+.region[data-dir="U"] .one .lb { font-size: clamp(24px, 7vw, 44px); }
+.region[data-dir="U"] .one.glyph .lb, .region[data-dir="U"] .one.letter .lb { font-size: clamp(44px, 14vw, 90px); }
+.region[data-dir="U"] .arrow { font-size: clamp(12px, 3.3vw, 16px); }
 .one.letter .sub { font-size: clamp(18px, 5vw, 28px); color: var(--ink); }
 
 /* 2–4 options */

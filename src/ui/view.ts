@@ -38,7 +38,7 @@ function folderPreview(n: Node): string {
   return n.children ? summarize(n.children, 4) : '';
 }
 
-function nodesHTML(nodes: Node[]): string {
+function nodesHTML(nodes: Node[], maxGlyphs = 24): string {
   const n = nodes.length;
   if (n === 0) return '';
   const style = nodes[0].style;
@@ -58,7 +58,7 @@ function nodesHTML(nodes: Node[]): string {
     const glyphs = nodes.filter(x => x.style === 'glyph');
     const chars = glyphs.filter(x => x.label.length === 1);
     const words = glyphs.filter(x => x.label.length > 1);
-    const show = [...chars.slice(0, 24), ...words.slice(0, chars.length > 8 ? 3 : 6)];
+    const show = [...chars.slice(0, maxGlyphs), ...words.slice(0, chars.length > 8 ? Math.min(3, Math.ceil(maxGlyphs / 6)) : 6)];
     const more = g0(glyphs.length, show.length);
     const g = glyphs.length;
     const size = g <= 4 ? 'g-l' : g <= 12 ? 'g-m' : 'g-s';
@@ -88,10 +88,47 @@ export function renderRegions(regions: Regions, active: Dir[]) {
     if (empty) { content.innerHTML = ''; continue; }
     const body = spec!.big
       ? `<div class="one">${spec!.big.icon ? `<div class="ic">${spec!.big.icon}</div>` : ''}<div class="lb">${esc(spec!.big.label)}</div>${spec!.big.sub ? `<div class="sub">${esc(spec!.big.sub)}</div>` : ''}</div>`
-      : nodesHTML(spec!.nodes!);
+      : nodesHTML(spec!.nodes!, d === 'U' ? 12 : 24);
     content.innerHTML = `<div class="arrow">${arrowText(d)}</div>${body}`;
   }
+  requestAnimationFrame(fitRegions);
 }
+
+/** Shrink a region's content until it fits, so nothing is cut off (the top band is short in 3-way). */
+export function fitRegions() {
+  document.querySelectorAll<HTMLElement>('.region:not([hidden])').forEach(el => {
+    const content = el.querySelector<HTMLElement>('.content');
+    if (!content) return;
+    content.style.zoom = '1';
+    const room = el.clientHeight - 16, roomW = el.clientWidth - 12;
+    for (let z = 1; z > 0.6; z -= 0.05) {
+      content.style.zoom = String(z);
+      const r = content.getBoundingClientRect();
+      if (r.height <= room && r.width <= roomW + 1) break;
+    }
+  });
+}
+
+/** Make the sentence fit its line: smaller type first; if still too long, show its end. */
+function fitSentence() {
+  const el = $('sentence');
+  el.style.fontSize = '';
+  const full = el.dataset.full ?? el.textContent ?? '';
+  el.textContent = full;
+  if (el.classList.contains('empty')) return;
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollHeight > el.clientHeight + 2 && size > 20) {
+    size -= 3;
+    el.style.fontSize = `${size}px`;
+  }
+  // still too long: keep the newest part visible
+  let cut = 0;
+  while (el.scrollHeight > el.clientHeight + 2 && cut < full.length - 4) {
+    cut += 2;
+    el.textContent = '…' + full.slice(cut);
+  }
+}
+window.addEventListener('resize', () => { fitRegions(); fitSentence(); });
 
 export function setProgress(dir: Dir | null, p: number) {
   for (const d of ['L', 'R', 'U'] as Dir[]) {
@@ -122,8 +159,10 @@ export function flash(dir: Dir) {
 
 export function setSentence(text: string, placeholder: string) {
   const el = $('sentence');
+  el.dataset.full = text || placeholder;
   el.textContent = text || placeholder;
   el.classList.toggle('empty', !text);
+  requestAnimationFrame(fitSentence);
 }
 
 export function setPrompt(text: string) { $('prompt').textContent = text; }
