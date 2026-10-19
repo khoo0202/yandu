@@ -14,6 +14,7 @@ export interface Settings {
   dwellMs: number;          // hold time in dwell mode
   glanceMs: number;         // hold time in glance mode
   flickMs: number;          // flick mode: this long past the edge chooses
+  upScale: number;          // how far up counts, relative to the calibrated threshold (lower = more sensitive)
   confidence: number;       // 0.5..0.95, how sure the classifier must be
   backMs: number;           // eyes closed this long = go back one step
   callGesture: CallGesture; // how the patient calls for help from any screen
@@ -31,7 +32,7 @@ export interface Profile {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  v: 4, selectStyle: 'outside', ways: 3, trigger: 'flick', dwellMs: 700, glanceMs: 300, flickMs: 150, confidence: 0.8, backMs: 2000,
+  v: 5, selectStyle: 'outside', ways: 3, trigger: 'flick', dwellMs: 700, glanceMs: 300, flickMs: 150, upScale: 1, confidence: 0.8, backMs: 2000,
   callGesture: 'triple', readOptions: false, autoSlow: true, speakPreviewMs: 1500, rate: 0.9,
 };
 
@@ -57,7 +58,8 @@ if (storedV < DEFAULT_SETTINGS.v) {
   if (storedV < 3) settings.ways = 3;
   // v4: calibration also measures reading at the very top of the screen, so "up" is not
   // mistaken for reading the sentence. Recalibrate once.
-  if (storedV < 4) {
+  // v5: per-person thresholds come from the calibration frames
+  if (storedV < 5) {
     try { localStorage.removeItem('yandu2.calib'); } catch { /* ignore */ }
   }
   settings.v = DEFAULT_SETTINGS.v;

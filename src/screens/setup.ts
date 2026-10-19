@@ -163,8 +163,13 @@ export async function calibrate(app: App, withUp: boolean): Promise<{ ok: boolea
         : '左右分不太开。请让病人眼睛往两边看得更多一些，或者把手机移近一点，再试一次。',
     };
   }
+  const apart = clf.fitThresholds(samples);
+  log('calib-thr', { detail: JSON.stringify(clf.m.thr) + ' ' + JSON.stringify(apart) });
+  if (apart.L === false || apart.R === false) {
+    return { ok: false, upOk: false, msg: '"看屏幕"和"看手机外面"有点分不开。请让病人眼睛往手机外面看得更远一些，再试一次。' };
+  }
   g.setClassifier(clf);
-  return { ok: true, upOk: up >= 2 };
+  return { ok: true, upOk: up >= 2 && apart.U !== false };
 }
 
 // ---------- step 3: action test ----------

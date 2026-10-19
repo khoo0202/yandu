@@ -220,6 +220,13 @@ label.check input { width: 22px; height: 22px; flex: none; }
 .status { font-size: 18px; font-weight: 600; }
 .status.ok { color: var(--ok); }
 .status.warn { color: var(--warn); }
+.meters { display: flex; flex-direction: column; gap: 10px; }
+.meter { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+.meter i { position: relative; flex: 1; height: 18px; border-radius: 9px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+/* white line = threshold, at 1 / 1.5 of the bar */
+.meter i::after { content: ""; position: absolute; top: 0; bottom: 0; left: 66.67%; width: 3px; background: var(--ink); }
+.meter b { display: block; height: 100%; width: 0; background: var(--dim); transition: width .08s linear; }
+.meter b.hit { background: var(--ok); }
 .testbig { font-size: 96px; text-align: center; line-height: 1.2; }
 
 @media (prefers-reduced-motion: reduce) {

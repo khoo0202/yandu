@@ -20,6 +20,17 @@ export function openSettings(app: App) {
     <h1>设置</h1>
     <p class="note">今天：选择 ${s.selects} 次，撤回 ${s.undos} 次，说出 ${s.spoken.length} 句。${s.spoken.length ? `最近：${esc(s.spoken.slice(-3).join(' / '))}` : ''}</p>
 
+    <h2>眼睛识别检查（实时）</h2>
+    <p class="note">让病人往左、右、上的手机外面看。条到达白线就算选中；只是读屏幕时，条应该停在白线以下。</p>
+    <div class="meters" id="meters">
+      <div class="meter"><span>左</span><i><b id="mL"></b></i></div>
+      <div class="meter"><span>右</span><i><b id="mR"></b></i></div>
+      <div class="meter"><span>上</span><i><b id="mU"></b></i></div>
+    </div>
+    <p class="note" id="mState">${app.gaze?.clf ? '' : '还没有开摄像头或还没校准。'}</p>
+    <label class="row" for="sUp">往上要看多高才算：<b id="vUp"></b><span>往上看没反应就调低；读最上面的字会误选就调高</span>
+      <input type="range" id="sUp" min="0.5" max="1.5" step="0.05"></label>
+
     <h2>选择方式</h2>
     <label class="row" for="sStyle">怎么用眼睛选
       <select id="sStyle"><option value="outside">往手机外面看（推荐：找字时随便看，不会误选）</option><option value="onscreen">看屏幕左右两边（旧方式）</option></select>
@@ -27,7 +38,7 @@ export function openSettings(app: App) {
     <label class="row" for="sWays">方向数
       <select id="sWays"><option value="2">二向：左、右</option><option value="3">三向：左、右、上（更快，要能稳定往上看）</option></select></label>
     <label class="row" for="sTrig">触发方式
-      <select id="sTrig"><option value="flick">往外看一下再看回来（最快，用于"往手机外面看"）</option><option value="dwell">看住一会儿（稳）</option><option value="glance">看一眼就算（快，容易误选）</option></select></label>
+      <select id="sTrig"><option value="flick">往外看一下就选中（最快，用于"往手机外面看"）</option><option value="dwell">看住一会儿（稳）</option><option value="glance">看一眼就算（快，容易误选）</option></select></label>
     <label class="row" for="sFlick">往外看多久就选中（"往外看一下"方式）：<b id="vFlick"></b><span>常常误选就调长；觉得慢就调短</span>
       <input type="range" id="sFlick" min="100" max="600" step="50"></label>
     <label class="row" for="sDwell">看住多久算选择（"看住一会儿"方式）：<b id="vDwell"></b>
@@ -65,6 +76,8 @@ export function openSettings(app: App) {
     $<HTMLSelectElement>('sStyle').value = settings.selectStyle;
     $<HTMLSelectElement>('sWays').value = String(settings.ways);
     $<HTMLSelectElement>('sTrig').value = settings.trigger;
+    $<HTMLInputElement>('sUp').value = String(settings.upScale);
+    $('vUp').textContent = settings.upScale < 0.95 ? `低一些（${settings.upScale.toFixed(2)}）` : settings.upScale > 1.05 ? `高一些（${settings.upScale.toFixed(2)}）` : '按校准（1.00）';
     $<HTMLInputElement>('sFlick').value = String(settings.flickMs);
     $('vFlick').textContent = `${(settings.flickMs / 1000).toFixed(2).replace(/0$/, '')} 秒`;
     $<HTMLInputElement>('sDwell').value = String(settings.trigger === 'glance' ? settings.glanceMs : settings.dwellMs);
@@ -99,6 +112,19 @@ export function openSettings(app: App) {
   });
   on('sTrig', 'change', el => { settings.trigger = el.value === 'glance' ? 'glance' : el.value === 'flick' ? 'flick' : 'dwell'; });
   on('sFlick', 'input', el => { settings.flickMs = Number(el.value); });
+  on('sUp', 'input', el => { settings.upScale = Number(el.value); });
+  // live meters while the settings are open
+  const NAME: Record<string, string> = { C: '在看屏幕', L: '往左外面', R: '往右外面', U: '往上外面' };
+  const live = window.setInterval(() => {
+    const g = app.gaze;
+    if (!g?.clf || !document.getElementById('mL')) return;
+    for (const k of ['L', 'R', 'U']) {
+      const el = document.getElementById(`m${k}`);
+      if (el) { const v = g.lastReach[k] ?? 0; el.style.width = `${Math.max(0, Math.min(1.5, v)) / 1.5 * 100}%`; el.classList.toggle('hit', v >= 1); }
+    }
+    const p = g.lastPred;
+    $('mState').textContent = g.last ? `现在判断：${p ? NAME[p.cls] : '—'}` : '看不到脸';
+  }, 100);
   on('sDwell', 'input', el => { if (settings.trigger === 'glance') settings.glanceMs = Number(el.value); else settings.dwellMs = Number(el.value); });
   on('sConf', 'input', el => { settings.confidence = Number(el.value) / 100; });
   on('sBack', 'input', el => { settings.backMs = Number(el.value); });
@@ -111,6 +137,7 @@ export function openSettings(app: App) {
   on('sFamily', 'change', el => { profile.family = el.value.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 5); });
 
   const close = () => {
+    clearInterval(live);
     m.hidden = true;
     m.innerHTML = '';
     app.modal = false;

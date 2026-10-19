@@ -10,6 +10,8 @@ export interface ClassifierModel {
   inv: number[][];                 // inverse pooled covariance
   mu0: number[]; sd0: number[];    // standardisation
   style?: string;                  // selection style the calibration was made for
+  /** per-person "how far is far enough" for each side, from the calibration frames (see fitThresholds) */
+  thr?: Record<string, number>;
 }
 
 export interface Prediction { cls: Cls; p: number; probs: Record<string, number> }
@@ -106,6 +108,26 @@ export class Classifier {
       den += v[i] * this.m.inv[i][j] * v[j];
     }
     return den > 0 ? num / den : 0;
+  }
+
+  /**
+   * Choose, for each side, how far the eyes must travel before it counts:
+   * halfway between the far end of reading (95th percentile of the screen frames)
+   * and the near end of the calibration look (25th percentile of that side's frames).
+   * Returns which sides can be told apart from reading at all.
+   */
+  fitThresholds(samples: Partial<Record<Cls, number[][]>>): Record<string, boolean> {
+    const pct = (xs: number[], q: number) => { const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * s.length))] ?? 0; };
+    const thr: Record<string, number> = {}, ok: Record<string, boolean> = {};
+    for (const k of ['L', 'R', 'U'] as Cls[]) {
+      if (!samples[k]?.length || !this.m.mean[k]) continue;
+      const readFar = pct((samples.C ?? []).map(x => this.reach(x, k)), 0.95);
+      const lookNear = pct(samples[k]!.map(x => this.reach(x, k)), 0.25);
+      ok[k] = lookNear > readFar + 0.05;
+      thr[k] = Math.min(0.85, Math.max(0.25, ok[k] ? (readFar + lookNear) / 2 : lookNear * 0.9));
+    }
+    this.m.thr = thr;
+    return ok;
   }
 
   /** Head moved: shift every class by part of the drift seen while the patient looks at the centre. */

@@ -12,7 +12,7 @@ const REMOTE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landm
 /** flick: still looking away this long after a choice = looking at something else, so the choice is taken back */
 const AUTO_UNDO_MS = 1400;
 /** how far towards the calibrated "outside" position the eyes must go (0 = reading, 1 = calibration) */
-const REACH: Record<string, number> = { L: 0.5, R: 0.5, U: 0.8 };
+const REACH_DEFAULT: Record<string, number> = { L: 0.5, R: 0.5, U: 0.6 };
 const REMOTE_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
 
 export interface GazeHandlers {
@@ -40,6 +40,8 @@ export class GazeEngine {
   holdOverride: { dir: Dir; ms: number } | null = null;
   last: Frame | null = null;
   lastPred: { cls: Cls; p: number } | null = null;
+  /** for the caregiver's live check: how far towards each side, as a share of what counts (1 = counts) */
+  lastReach: Record<string, number> = { L: 0, R: 0, U: 0 };
 
   private lastT = 0;
   private faceSeenAt = 0;
@@ -169,7 +171,8 @@ export class GazeEngine {
     if (now - this.lastQuality > 1000) { this.lastQuality = now; this.h.quality(this.checkQuality(f)); }
 
     if (this.sink) { if (f.blink < 0.4) this.sink.push(f.x); return; }
-    if (!this.clf || this.paused) return;
+    if (!this.clf) return;
+    if (this.paused) { this.measure(f.x); return; }
 
     // ---- eyes closed: long close = back, three quick blinks = call ----
     if (f.blink > 0.5) {
@@ -212,7 +215,15 @@ export class GazeEngine {
       } else this.upSince = 0;
     }
 
-    if (pred.cls === 'C') {
+    // Decide by how far the eyes went towards each side (per-person thresholds from calibration):
+    // the side that went furthest past its threshold, if any. "Centre" = clearly back on the screen.
+    this.measure(f.x);
+    const sides = this.dirs.filter(d => (settings.ways === 3 || d !== 'U'));
+    let dir: Dir | null = null, best = 1;
+    for (const k of sides) { const r = this.lastReach[k] ?? 0; if (r >= best) { best = r; dir = k; } }
+    const centre = Math.max(0, ...(['L', 'R', 'U'] as const).map(k => this.lastReach[k] ?? 0)) < 0.7;
+
+    if (centre) {
       if (!this.centreSince) this.centreSince = now;
       if (now - this.centreSince > 150) this.armed = true;
       // drift correction from steady centre frames
@@ -227,11 +238,7 @@ export class GazeEngine {
       }
     } else this.centreSince = 0;
 
-    let dir = (pred.cls !== 'C' && pred.p >= settings.confidence && this.dirs.includes(pred.cls as Dir)) ? pred.cls as Dir : null;
-    // up is the hardest to tell from reading the top line: ask for more certainty and a clearer look
-    if (dir === 'U' && pred.p < Math.max(settings.confidence, 0.93)) dir = null;
-    if (dir && this.clf.reach(f.x, dir) < REACH[dir]) dir = null;
-    if (settings.trigger === 'flick' && !this.holdOverride) { this.flick(dir, pred.cls === 'C', now); return; }
+    if (settings.trigger === 'flick' && !this.holdOverride) { this.flick(dir, centre, now); return; }
     if (!this.armed || now < this.coolUntil) {
       this.side = null;
       this.h.progress(null, 0);
@@ -251,6 +258,18 @@ export class GazeEngine {
     }
   }
 
+  /** Threshold for a side: learned at calibration, "up" scaled by the caregiver's setting. */
+  threshold(k: string): number {
+    const base = this.clf?.m.thr?.[k] ?? REACH_DEFAULT[k];
+    return k === 'U' ? base * settings.upScale : base;
+  }
+
+  private measure(x: number[]) {
+    if (!this.clf) return;
+    for (const k of ['L', 'R', 'U']) this.lastReach[k] = this.clf.m.mean[k] ? this.clf.reach(x, k as Cls) / this.threshold(k) : 0;
+    this.lastPred = this.clf.predict(x, ['L', 'R', 'U']);
+  }
+
   /**
    * Flick: a short look past the edge chooses that side straight away. The eyes
    * must come back to the screen before the next choice. If they stay outside
@@ -264,7 +283,7 @@ export class GazeEngine {
       const t = now - o.since;
       if (!o.fired) {
         if (!this.armed) { this.h.progress(null, 0); return; }
-        const need = dir === 'U' ? Math.max(settings.flickMs, 180) : settings.flickMs;
+        const need = settings.flickMs;
         this.h.progress(dir, Math.min(1, t / need));
         if (t >= need) {
           o.fired = true;
